@@ -1,13 +1,13 @@
 # 🤖 Robot Autónomo con Reconocimiento de Bolitas de Colores
 
-Este proyecto tiene como objetivo desarrollar un **robot autónomo** utilizando una **Raspberry Pi** junto con el kit de **Elegoo Smart Robot Car V4.0**. El robot está diseñado para reconocer y seguir bolitas de colores mediante el uso de **Python** 🐍 y **OpenCV** para procesar las imágenes capturadas por la cámara 📸 del robot.
+Este proyecto tiene como objetivo desarrollar un **robot autónomo** utilizando una **Raspberry Pi** junto con el kit de **Elegoo Smart Robot Car V4.0**. El robot está diseñado para reconocer y seguir bolitas de colores mediante el uso de **Python** y **OpenCV** para procesar las imágenes capturadas por la cámara del robot.
 
 ## Características principales:
 
 - **Visión por Computadora:** Utiliza **OpenCV** para capturar imágenes de la cámara y procesarlas en tiempo real para identificar bolitas de colores específicos.
 - **Autonomía en Movimiento:** El robot se mueve hacia la bolita de color detectada, adaptando su trayectoria para alcanzarla utilizando cálculos de distancia y ángulo basados en los datos obtenidos de la cámara.
 - **Control del Robot:** El movimiento y la orientación del robot son controlados a través de comandos enviados a la placa base del Elegoo Smart Robot Car V4.0, con un control preciso de la velocidad y el ángulo de giro.
-- **Hardware 🔧:** Utiliza una **Raspberry Pi** como cerebro del sistema, que se conecta a la cámara y controla el Elegoo Smart Robot Car V4.0. El robot es alimentado por una batería recargable 🔋, lo que le permite funcionar de manera autónoma durante varias horas.
+- **Hardware:** Utiliza una **Raspberry Pi** como cerebro del sistema, que se conecta a la cámara y controla el Elegoo Smart Robot Car V4.0. El robot es alimentado por una batería recargable, lo que le permite funcionar de manera autónoma durante varias horas.
 
 ## Componentes utilizados:
 
