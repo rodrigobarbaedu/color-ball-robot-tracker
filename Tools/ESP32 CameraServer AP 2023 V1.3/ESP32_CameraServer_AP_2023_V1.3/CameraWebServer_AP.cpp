@@ -137,21 +137,29 @@ void CameraWebServer_AP::CameraWebServer_AP_Init(void)
   if(config.pixel_format == PIXFORMAT_JPEG){
     // s->set_framesize(s, FRAMESIZE_QVGA);
     s->set_framesize(s, FRAMESIZE_SVGA);
-    //  s->set_framesize(s, FRAMESIZE_SXGA);
+    // s->set_framesize(s, FRAMESIZE_SXGA);
     // s->set_framesize(s, FRAMESIZE_UXGA);
     // s->set_framesize(s, FRAMESIZE_QSXGA);
   }
 */
 
 #if defined(CAMERA_MODEL_M5STACK_WIDE)
-  s->set_vflip(s, 1);
-  s->set_hmirror(s, 1);
+  s->set_vflip(s, 1);   //图片方向设置（上下）
+  s->set_special_effect(s, 5);
+  s->set_hmirror(s, 0); //图片方向设置（左右）
+  s->set_brightness(s, 0);
+  s->set_contrast(s, 0);
+  s->set_saturation(s, 1);
 #endif
   /*
     6. Flip Vertically Camera Image.
   */
   s->set_vflip(s, 1);   //图片方向设置（上下）
+  s->set_special_effect(s, 5);
   s->set_hmirror(s, 0); //图片方向设置（左右）
+  s->set_brightness(s, 0);
+  s->set_contrast(s, -1);
+  s->set_saturation(s, 1);
 
 /*
 #if defined(CAMERA_MODEL_ESP32S3_EYE)
