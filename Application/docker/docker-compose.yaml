@@ -1,12 +1,21 @@
 version: '3.8'
 
 services:
-  flask-app:
+  app-1:
     build:
       context: ../  # Specify the context of the build
-      dockerfile: docker/Dockerfile  # Specify the Dockerfile to use
+      dockerfile: docker/Dockerfile.app1  # Specify the Dockerfile to use
     ports:
       - "5050:5050"   # Map port 5000 in the container to port 5050 on the host
+    networks:
+      - flask-network  # Connect the container to the flask-network
+
+  app-2:
+    build:
+      context: ../  # Specify the context of the build
+      dockerfile: docker/Dockerfile.app2  # Specify the Dockerfile to use
+    ports:
+      - "5050:5050"   # Map port 5000 in the container to port 5051 on the host
     networks:
       - flask-network  # Connect the container to the flask-network
 

@@ -1,0 +1,27 @@
+# Use Python 3.11 Slim as base image
+FROM python:3.11-slim
+
+# Enable working directory
+WORKDIR /app
+
+# Copy requirements.txt file to the container
+COPY requirements.txt /app/
+
+RUN apt-get update && apt-get install -y \
+    libgl1-mesa-glx libglib2.0-0 libsm6 libxrender1 libxext6 
+
+# Install dependencies
+RUN python -m venv venv && \
+    . venv/bin/activate && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Expose the port 5050
+EXPOSE 5050
+
+# Copy the application code (app.py) from /app
+COPY /static /app/static
+COPY /templates /app/templates
+COPY /obstacle_tracking.py /app/app.py
+
+# Run the application
+CMD ["/bin/bash", "-c", ". venv/bin/activate && python app.py"]
