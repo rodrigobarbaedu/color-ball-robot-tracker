@@ -11,6 +11,9 @@ from urllib.request import urlopen
 from flask_socketio import SocketIO, emit
 from flask import Flask, Response, render_template
 
+
+
+
 # Flask setup
 app = Flask(__name__)
 
@@ -49,6 +52,9 @@ def capture_image():
     return img
 
 
+
+
+
 @app.route('/video_feed')
 def video_feed():
     """
@@ -67,13 +73,13 @@ def video_feed():
             time.sleep(0.1)  # Sleep to reduce CPU usage
     return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-@app.route('/console_log')
+@app.route('/')
 def console_log():
-    return render_template('console.html')
+    return render_template('app_1.html')
 
 # Start the Flask app in a separate thread
 def start_flask():
-    socketio.run(app, host='0.0.0.0', port=5050)
+    socketio.run(app, host='127.0.0.1', port=5050, allow_unsafe_werkzeug=True)
 
 # Start Flask server in a new thread
 flask_thread = threading.Thread(target=start_flask)
@@ -81,9 +87,13 @@ flask_thread.daemon = True  # Daemonize the thread to allow the main program to 
 flask_thread.start()
 
 # Start the camera capture in a separate thread
+
 capture_thread = threading.Thread(target=capture)
 capture_thread.daemon = True  # Daemonize the thread to allow the main program to exit
 capture_thread.start()
+
+
+
 
 def cmd(sock, do, what='', where='', at=''):
     """
@@ -134,7 +144,14 @@ def cmd(sock, do, what='', where='', at=''):
     try:
         sock.send(msg_json.encode())
     except:
-        socketio.emit('console', f"{cmd_no}: {do} {what} {where} {at}")
+        socketio.emit(
+            'console',
+            {
+                'type': 'cmd',
+                'color': '#ff0000',
+                'data': f"Error: {sys.exc_info()[0]}",
+            }           
+        )
         sys.exit()
 
     # Wait for the response
@@ -151,8 +168,18 @@ def cmd(sock, do, what='', where='', at=''):
         res = round(int(res) * 1.3, 1)  # Correct distance with a factor
     else:
         res = int(res)
-    socketio.emit('console', f"{cmd_no}: {do} {what} {where} {at}")
+    socketio.emit(
+        'console', 
+        {
+            'type': 'cmd',
+            'color': '#a1ff0a',
+            'data': f"{cmd_no}: {do} {what} {where} {at}: {res}",
+        }
+    )
     return res
+
+
+
 
 # Connect to car's WiFi
 ip = "192.168.4.1"
@@ -164,18 +191,59 @@ car = socket.socket()
 try:
     car.connect((ip, port))
 except:
-    print("Error:", sys.exc_info()[0])
+    socketio.emit(
+        'console', 
+        {
+            'type': 'action',
+            'color': '#ff0000',
+            'data': f"Error: {sys.exc_info()[0]}",
+        }
+    )
+        
     sys.exit()
-print("Connected!")
+
+socketio.emit(
+    'console',
+    {
+        'type': 'action',
+        'color': '#a1ff0a',
+        'data': f"Connected to {ip}:{port}",
+    }
+)
 
 # Read first data from socket
-print(f"Receive from {ip}:{port}")
+socketio.emit(
+    'console',
+    {
+        'type': 'action',
+        'color': '#ff8700',
+        'data': "Reading data from the socket...",
+    }
+)
 try:
     data = car.recv(1024).decode()  # Receive data from the car
 except:
-    print("Error:", sys.exc_info()[0])
+    socketio.emit(
+        'console',
+        {
+            'type': 'action',
+            'color': '#ff8700',
+            'data': f"Error: {sys.exc_info()[0]}",
+        }
+    )
     sys.exit()
-print("Received:", data)
+
+socketio.emit(
+    'console',
+    {
+        'type': 'action',
+        'color': '#a1ff0a',
+        'data': f"Data received: {data}",
+    }
+)
+
+
+
 
 # Evasion of obstacles
 speed = 100         # Car speed
@@ -188,7 +256,14 @@ def evade_obstacle():
     """
     Handles obstacle evasion with smarter behavior to avoid getting stuck in corners or retrying unnecessary actions.
     """
-    print("Obstacle detected! Evading...")
+    socketio.emit(
+        'console',
+        {
+            'type': 'action',
+            'color': '#147df5',
+            'data': "Obstacle detected. Evading...",
+        }
+    )
     cmd(car, do='stop')  # Stop the car
     
     # Rotate the sensor to left and right to measure distances
@@ -199,38 +274,95 @@ def evade_obstacle():
 
     # Evaluate distances and decide direction
     if dist[1] > dist_min and dist[2] > dist_min:  # Both sides clear
-        print("Clear on both sides. Moving forward.")
+        socketio.emit(
+            'console',
+            {
+                'type': 'action',
+                'color': '#580aff',
+                'data': "Both sides clear. Moving forward.",
+            }
+        )
         cmd(car, do='move', where='forward', at=speed)
     elif dist[1] > dist_min:  # More space to the left
-        print("Turning left to avoid obstacle.")
+        socketio.emit(
+            'console',
+            {
+                'type': 'action',
+                'color': '#be0aff',
+                'data': "Turning left to avoid obstacle.",
+            }
+        )
         cmd(car, do='move', where='left', at=speed)
         time.sleep(0.5)
 
         # Check if left turn was successful and has enough space to continue
         left_check = cmd(car, do='measure', what='distance')
         if left_check > dist_min:
-            print("Space cleared after left turn, continuing.")
+            socketio.emit(
+                'console',
+                {
+                    'type': 'action',
+                    'color': '#be0aff',
+                    'data': "Space cleared after left turn, continuing.",
+                }
+            )
             cmd(car, do='move', where='forward', at=speed)
         else:
-            print("No space after left turn. Moving backward.")
+            socketio.emit(
+                'console',
+                {
+                    'type': 'action',
+                    'color': '#be0aff',
+                    'data': "No space after left turn. Moving backward.",
+                }
+            )
+
             cmd(car, do='move', where='back', at=speed)
             time.sleep(0.5)
     elif dist[2] > dist_min:  # More space to the right
-        print("Turning right to avoid obstacle.")
+        socketio.emit(
+            'console',
+            {
+                'type': 'action',
+                'color': '#0aefff',
+                'data': "Turning right to avoid obstacle.",
+            }
+        )
         cmd(car, do='move', where='right', at=speed)
         time.sleep(0.5)
 
         # Check if right turn was successful and has enough space to continue
         right_check = cmd(car, do='measure', what='distance')
         if right_check > dist_min:
-            print("Space cleared after right turn, continuing.")
+            socketio.emit(
+                'console',
+                {
+                    'type': 'action',
+                    'color': '#0aefff',
+                    'data': "Space cleared after right turn, continuing.",
+                }
+            )
             cmd(car, do='move', where='forward', at=speed)
         else:
-            print("No space after right turn. Moving backward.")
+            socketio.emit(
+                'console',
+                {
+                    'type': 'action',
+                    'color': '#0aefff',
+                    'data': "No space after right turn. Moving backward.",
+                }
+            )
             cmd(car, do='move', where='back', at=speed)
             time.sleep(0.5)
     else:  # No space on either side, move backward
-        print("No clear path. Moving backward.")
+        socketio.emit(
+            'console',
+            {
+                'type': 'action',
+                'color': '#0aff99',
+                'data': "No space on either side. Moving backward.",
+            }
+        )
         cmd(car, do='move', where='back', at=speed)
         time.sleep(0.5)
 
@@ -240,12 +372,21 @@ def evade_obstacle():
         front_distance = cmd(car, do='measure', what='distance')
         if front_distance > dist_min or attempt > 3:  # Path cleared or too many failed attempts
             break
-        print("Still stuck, retrying evasive action...")
+        socketio.emit(
+            'console',
+            {
+                'type': 'action',
+                'color': '#ffd300',
+                'data': "Obstacle still in front. Moving backward.",
+            }
+        )
         cmd(car, do='move', where='back', at=speed)
         time.sleep(0.5)
         attempt += 1
 
     cmd(car, do='stop')  # Stop after avoiding obstacle
+
+
 
 
 # Main loop
@@ -256,7 +397,14 @@ cmd(car, do='move', where='forward', at=speed)  # Start moving forward
 while True:
     # Check if car was lifted off the ground to interrupt the loop
     if cmd(car, do='check'):
-        print("Car was lifted. Stopping...")
+        socketio.emit(
+            'console',
+            {
+                'type': 'action',
+                'color': '#ff0000',
+                'data': "Car was lifted off the ground. Stopping...",
+            }
+        )
         break
 
     # Check distance to obstacles
