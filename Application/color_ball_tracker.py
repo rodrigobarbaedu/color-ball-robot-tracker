@@ -83,7 +83,6 @@ def show():
 def capture_image(yh=491):
     """
     Capture the image using the camera and return it.
-    This is the existing capture() function you provided.
     """
     global cmd_no
     cam = urlopen('http://192.168.4.1/capture')

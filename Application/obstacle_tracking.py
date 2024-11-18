@@ -1,3 +1,15 @@
+"""
+Obstacle Tracking and Avoidance with Object Detection and Tracking
+Created by: Michael Bozall,
+Date: 2021-08-25,
+Modified by: Rodrigo Barba,
+Date: 2024-11-14,
+Description: This script demonstrates how to track and avoid obstacles using object detection and tracking with a camera mounted on a car. The car is controlled via a socket connection to send commands and receive responses. The script uses OpenCV for image processing and object detection, and a Flask server to stream the camera feed to a web interface. The car moves forward until an obstacle is detected, then it stops and evades the obstacle by turning left or right based on the available space. The car continues moving forward after evading the obstacle. The script also includes a check to stop the car if it is lifted off the ground to prevent damage to the motors.
+"""
+
+
+
+
 # Load modules
 import re
 import sys
@@ -18,7 +30,7 @@ from flask import Flask, Response, render_template
 app = Flask(__name__)
 
 # Initialize SocketIO
-socketio = SocketIO(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Send a command and receive a response
 cmd_no = 0
@@ -42,7 +54,6 @@ def capture():
 def capture_image():
     """
     Capture the image using the camera and return it.
-    This is the existing capture() function you provided.
     """
     global cmd_no
     cam = urlopen('http://192.168.4.1/capture')
@@ -79,7 +90,7 @@ def console_log():
 
 # Start the Flask app in a separate thread
 def start_flask():
-    socketio.run(app, host='127.0.0.1', port=5050, allow_unsafe_werkzeug=True)
+    socketio.run(app, host='0.0.0.0', port=5050, allow_unsafe_werkzeug=True)
 
 # Start Flask server in a new thread
 flask_thread = threading.Thread(target=start_flask)
