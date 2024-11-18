@@ -11,15 +11,18 @@ Description: This script captures an image from a camera, filters it for a speci
 
 
 # Load modules
-import re                        # Regular expressions
-import sys                       # System-specific parameters and functions
-import json                      # JSON parsing and manipulation
-import time                      # Time-related functions
-import socket                    # Networking support
-import imutils                   # Additional OpenCV utilities
-import cv2 as cv                 # OpenCV for computer vision tasks
-import numpy as np               # Numerical operations with arrays
+import re  # Regular expressions
+import sys  # System-specific parameters and functions
+import json  # JSON parsing and manipulation
+import time   # Time-related functions
+import socket  # Networking support
+import imutils  # Additional OpenCV utilities
+import threading  # Thread-based parallelism
+import cv2 as cv  # OpenCV for computer vision tasks
+import numpy as np  # Numerical operations with arrays
 from urllib.request import urlopen  # To fetch images from a URL
+from flask_socketio import SocketIO, emit  # Socket communication for web interface
+from flask import Flask, Response, render_template  # Web server and template rendering
 
 
 
@@ -36,10 +39,19 @@ color_ranges = {
 cv.namedWindow('Camera')         # Create a named window for displaying the camera feed
 cv.moveWindow('Camera', 0, 0)    # Position the window at the top-left corner of the screen
 
+# Flask setup
+app = Flask(__name__)
+
+# Initialize SocketIO
+socketio = SocketIO(app, cors_allowed_origins="*")
+
+# Shared variable to hold the captured image
+current_frame = None
+
 cmd_no = 0  # Initialize the command number counter
 
 # Function to switch between colors
-def switch_color(color="green") -> tuple:
+def switch_color(color="blue") -> tuple:
     """
     Switches to the desired color HSV range for detection.
     Accepts "green", "blue", or "red" as input.
@@ -55,6 +67,72 @@ def switch_color(color="green") -> tuple:
     else:
         print("Invalid color. Defaulting to green.")
         return color_ranges["green"]
+
+def show():
+    """
+    Captures an image from the camera and stores it in the global variable.
+    This function runs in a separate thread to ensure the image is updated continuously.
+    """
+    global current_frame
+    while True:
+        # Capture the image from the car's camera
+        img = capture_image()  # Assuming capture_image() is your current capture() method
+        current_frame = img  # Store the image in the shared variable
+        time.sleep(0.1)  # Sleep for a short time to simulate continuous capture
+
+def capture_image(yh=491):
+    """
+    Capture the image using the camera and return it.
+    This is the existing capture() function you provided.
+    """
+    global cmd_no
+    cam = urlopen('http://192.168.4.1/capture')
+    img = cam.read()
+    img = np.asarray(bytearray(img), dtype='uint8')
+    img = cv.imdecode(img, cv.IMREAD_UNCHANGED)
+    cv.line(img, (400, 0), (400, 600), (0, 0, 255), 1)  # Vertical center line
+    cv.line(img, (0, 600 - yh), (800, 600 - yh), (0, 0, 255), 1)  # Horizon line
+    return img
+
+@app.route('/video_feed')
+def video_feed():
+    """
+    A Flask route to stream the current image to the browser.
+    """
+    def generate():
+        global current_frame
+        while True:
+            if current_frame is not None:
+                # Convert the image to JPEG for streaming
+                ret, jpeg = cv.imencode('.jpg', current_frame)
+                if ret:
+                    # Return the image in the appropriate format for Flask streaming
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n\r\n')
+            time.sleep(0.1)  # Sleep to reduce CPU usage
+    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@app.route('/')
+def console_log():
+    return render_template('app_2.html')
+
+# Start the Flask app in a separate thread
+def start_flask():
+    socketio.run(app, host='0.0.0.0', port=5050, allow_unsafe_werkzeug=True)
+
+# Start Flask server in a new thread
+flask_thread = threading.Thread(target=start_flask)
+flask_thread.daemon = True  # Daemonize the thread to allow the main program to exit
+flask_thread.start()
+
+# Start the camera capture in a separate thread
+
+capture_thread = threading.Thread(target=show)
+capture_thread.daemon = True  # Daemonize the thread to allow the main program to exit
+capture_thread.start()
+
+
+
 
 def capture():
     """
@@ -130,9 +208,23 @@ def capture():
         dist = np.sqrt(dx**2 + dy**2)         # Calculate the total distance
         ang_rad = np.arctan(dx / dy)          # Calculate the angle in radians
         ang_deg = round(ang_rad * 180 / np.pi)  # Convert the angle to degrees
-        print('bd =', round(dist), 'ba =', ang_deg)  # Print distance and angle
+        socketio.emit(
+            'console',
+            {
+                'type': 'cmd',
+                'color': '#a1ff0a',
+                'data': f"Ball detected at ({xc}, {yc}) with distance {round(dist)} cm and angle {ang_deg} degrees",
+            }
+        )
     else:
-        print('no ball')  # No valid ball detected
+        socketio.emit(
+            'console',
+            {
+                'type': 'cmd',
+                'color': '#ff0000',
+                'data': f"No ball detected"
+            }           
+        )
     
     # Draw guidelines
     cv.line(img, (400, 0), (400, 600), (0, 0, 255), 1)  # Vertical center line
@@ -215,7 +307,14 @@ def cmd(sock, do, what='', where='', at=''):
     try:
         sock.send(msg_json.encode())  # Send the JSON message over the socket
     except:
-        print('Error: ', sys.exc_info()[0])  # Log the error
+        socketio.emit(
+            'console',
+            {
+                'type': 'cmd',
+                'color': '#ff0000',
+                'data': f"Error: {sys.exc_info()[0]}",
+            }           
+        )
         sys.exit()  # Exit the program if an error occurs
 
     # Wait for a valid response
@@ -245,7 +344,14 @@ def cmd(sock, do, what='', where='', at=''):
         res = int(res)  # Convert the response to an integer for other cases
 
     # Log the response
-    print(res)
+    socketio.emit(
+        'console', 
+        {
+            'type': 'cmd',
+            'color': '#a1ff0a',
+            'data': f"{cmd_no}: {do} {what} {where} {at}: {res}",
+        }
+    )
 
     return res  # Return the processed response
 
@@ -255,7 +361,14 @@ def cmd(sock, do, what='', where='', at=''):
 # Define the IP address and port of the car's WiFi
 ip = "192.168.4.1"  # IP address of the car
 port = 100          # Port number for communication
-print('Connect to {0}:{1}'.format(ip, port))  # Log connection attempt
+socketio.emit(
+    'console', 
+    {
+        'type': 'action',
+        'color': '#ff0000',
+        'data': f"Error: {sys.exc_info()[0]}",
+    }
+)
 
 # Create a socket object for the connection
 car = socket.socket()
@@ -268,20 +381,38 @@ except:
     print('Error: ', sys.exc_info()[0])  # Print the error message
     sys.exit()  # Exit the program if connection fails
 
-print('Connected!')  # Confirm successful connection
-
-#%% Read first data from socket
-print('Receive from {0}:{1}'.format(ip, port))  # Log data reception attempt
+socketio.emit(
+    'console',
+    {
+        'type': 'action',
+        'color': '#a1ff0a',
+        'data': f"Connected to {ip}:{port}",
+    }
+)
 
 # Try to receive initial data from the socket
 try:
     data = car.recv(1024).decode()  # Receive up to 1024 bytes and decode the message
 except:
     # Handle any errors during data reception
-    print('Error: ', sys.exc_info()[0])  # Print the error message
+    socketio.emit(
+        'console',
+        {
+            'type': 'action',
+            'color': '#ff0000',
+            'data': f"Error: {sys.exc_info()[0]}",
+        }
+    )
     sys.exit()  # Exit the program if data reception fails
 
-print('Received: ', data)  # Log the received data
+socketio.emit(
+    'console',
+    {
+        'type': 'action',
+        'color': '#a1ff0a',
+        'data': f"Received: {data}",
+    }
+)
 
 
 
@@ -344,7 +475,14 @@ def find_ball():
                 # If the detected ball is beyond the minimum safe distance
                 if d > dist_min:
                     found = 1  # Mark ball as found
-                    print('found ball: bdist =', round(bd, 1), 'dist =', d)
+                    socketio.emit(
+                        'console',
+                        {
+                            'type': 'action',
+                            'color': '#a1ff0a',
+                            'data': f"Ball found at {round(bd)} cm and {ba_deg} degrees",
+                        }
+                    )
 
                     # Rotate head back to the center
                     cmd(car, do='rotate', at=90)
@@ -357,7 +495,14 @@ def find_ball():
                         cmd(car, do='move', where='left', at=speed)  # Move left
                     
                     # Log the steering angle and adjust position
-                    print('steering angle =', steer_ang)
+                    socketio.emit(
+                        'console',
+                        {
+                            'type': 'action',
+                            'color': '#a1ff0a',
+                            'data': f"Steering angle: {steer_ang} degrees",
+                        }
+                    )
                     time.sleep(dturn / speed * abs(steer_ang) / 180)  # Adjust position
                     cmd(car, do='stop')  # Stop the robot
                     time.sleep(0.5)  # Pause briefly
