@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Ball Tracking Application</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/terminalize.css') }}">
+</head>
+
+<body class="terminalize screen theme-blue">
+
+    <div class="screen scanlines">
+        <div class="pannel rounded">
+            <div class="pannel-header">
+                <div class="col a-s">
+                    <div class="row j-b a-auto w-100">
+                        <div id="title" ""="" class="type">Color Ball Tracking Application<span
+                                class="cursor blink"></span></div>
+                    </div>
+                </div>
+                <div class="col controls">
+                    <div class="control">x</div>
+                </div>
+            </div>
+
+            <div class="pannel-body">
+                <div class="pannel fluid">
+                    <div class="pannel-header inverse">
+                        <div class="col a-s">What is this? / What does it do?</div>
+                    </div>
+                    <div class="pannel-body">
+                        <div class="post">
+                            <p>
+                                Welcome to the Color Ball Tracking Application. This application is designed to track
+                                color balls
+                                in real-time using a camera. The application will detect color balls and if its the
+                                right
+                                color, it will go to the ball, if not, it will ignore it.
+                            </p>
+                            <p>
+                                The application will provide a live feed of the camera and the output of the actions and
+                                logs
+                                will be displayed in the console below.
+                            </p>
+                            <p>
+                                The application is created using Python and Flask for the backend and HTML, CSS, and
+                                JavaScript
+                                for the frontend. The application uses Socket.IO to communicate between the server and
+                                the client.
+                            </p>
+
+                            <p class="type">- Love from Angel, Mae and Rodrigo ˗ˋˏ ♡ ˎˊ˗<span
+                                    class="cursor blink"></span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pannel fluid">
+                    <div class="pannel-header inverse">
+                        <div class="col a-s">Camera Feed</div>
+                    </div>
+                    <div class="pannel-body">
+                        <div class="post" style="text-align: center;">
+                            <img src="{{ url_for('video_feed') }}" class="img-fluid" alt="Video Feed">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pannel fluid">
+                    <div class="pannel-header inverse">
+                        <div class="col a-s">Action Output</div>
+                    </div>
+                    <div class="pannel-body">
+                        <div class="post" style="flex: 1; overflow-y: auto; max-height: 200px; width: 100%;">
+                            <div id="action-output" class="console"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pannel fluid">
+                    <div class="pannel-header inverse">
+                        <div class="col a-s">Log Output</div>
+                    </div>
+                    <div class="pannel-body">
+                        <div class="post" style="overflow-y: auto; max-height: 200px; width: 100%;">
+                            <div id="log-output" class="console"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pannel-footer inverse">
+                <div class="col a-e">Shinia Corporation, 2024</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.socket.io/4.8.0/socket.io.min.js"
+        integrity="sha384-OoIbkvzsFFQAG88r+IqMAjyOtYDPGO0cqK5HF5Uosdy/zUEGySeAzytENMDynREd"
+        crossorigin="anonymous"></script>
+
+
+    <script>
+        /*
+        * Function to update the console with the messages
+            @param {Object} message - The message object
+            @return {void}
+        */
+        function updateConsole(message) {
+            // Get the console elements
+            var actionOutput = document.getElementById('action-output');
+            var logOutput = document.getElementById('log-output');
+
+            // Get the current datetime
+            datetime = new Date();
+            datetime = datetime.toISOString().slice(0, 19).replace("T", " ");
+            datetime = datetime.replace("Z", "");
+            datetime = datetime.replace("T", " ");
+
+            // Verify the type of message and add it to the console
+            if (message.type === 'action') {
+                // If the message is an action, add it to the action output
+                actionOutput.innerHTML += "<p style='margin: 0; color: " + message.color + "'> > " + datetime + " - " + message.data + "</p>" + "<br>";
+                actionOutput.scrollTop = actionOutput.scrollHeight;
+            } else {
+                // If the message is a log, add it to the log output
+                logOutput.innerHTML += "<p style='margin: 0; color: " + message.color + "'> > " + datetime + " - " + message.data + "</p>" + "<br>";
+                logOutput.scrollTop = logOutput.scrollHeight;
+            }
+        }
+
+        // Create a socket connection to the server
+        var socket = io.connect('http://127.0.0.1:5050');
+
+        // Listen for the console event
+        socket.on('console', function (message) {
+            updateConsole(message);
+        });
+    </script>
+</body>
+
+</html>
