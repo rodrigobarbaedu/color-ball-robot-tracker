@@ -26,6 +26,8 @@ from flask import Flask, Response, render_template  # Web server and template re
 
 
 
+import os
+os.environ["QT_QPA_PLATFORM"] = "xcb"
 
 # Define color ranges for filtering
 color_ranges = {
@@ -36,8 +38,8 @@ color_ranges = {
 }
 
 # Capture image from camera
-cv.namedWindow('Camera')         # Create a named window for displaying the camera feed
-cv.moveWindow('Camera', 0, 0)    # Position the window at the top-left corner of the screen
+# cv.namedWindow('Camera')         # Create a named window for displaying the camera feed
+# cv.moveWindow('Camera', 0, 0)    # Position the window at the top-left corner of the screen
 
 # Flask setup
 app = Flask(__name__)
@@ -230,8 +232,8 @@ def capture():
     cv.line(img, (0, 600 - yh), (800, 600 - yh), (0, 0, 255), 1)  # Horizon line
     
     # Display the image
-    cv.imshow('Camera', img)
-    cv.waitKey(1)  # Wait briefly to refresh the display
+    # cv.imshow('Camera', img)
+    # cv.waitKey(1)  # Wait briefly to refresh the display
     
     return ball, dist, ang_rad, ang_deg  # Return detection results
 
