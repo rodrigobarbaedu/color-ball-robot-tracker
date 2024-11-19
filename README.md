@@ -17,6 +17,7 @@ Este proyecto tiene como objetivo desarrollar un **robot autónomo** utilizando 
 ## Componentes utilizados:
 
 - **Raspberry Pi:** Placa de desarrollo que actúa como el controlador principal del robot, ejecutando los scripts en Python y gestionando las operaciones de visión por computadora.
+
 - **Elegoo Smart Robot Car V4.0:** Kit de robot con motores de Elegoo, ruedas y sensores de proximidad, utilizado para el movimiento y la navegación del robot.
 - **Python & OpenCV:** Lenguaje de programación y biblioteca de visión por computadora para procesar las imágenes, detectar pelotas de colores y calcular la posición relativa del robot con respecto a la bolita, además de controlar el movimiento del robot.
 - **Cámara:** Cámara ESP32-S3 para capturar imágenes en tiempo real y procesarlas para la detección de bolitas de colores.
